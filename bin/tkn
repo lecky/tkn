@@ -7,6 +7,18 @@ require 'io/console'
 require 'active_support/core_ext/string/strip'
 require 'pygments'
 
+red = "\e[31;1m"
+green = "\e[32;1m"
+yellow = "\e[33;1m"
+blue = "\e[34;1m"
+magenta = "\e[35;1m"
+cyan = "\e[36;1m"
+@reset = "\e[0m"
+@colors = [red, green, yellow, blue, magenta, cyan]
+
+def color
+  %(#{@reset}#{@colors.sample})
+end
 
 #
 # --- DSL -------------------------------------------------------------
@@ -135,6 +147,7 @@ end
 
 # Renders the content by centering each individual line.
 def render_center(content)
+  content = color + content + color
   nrows, ncols = winsize
 
   ''.tap do |str|
@@ -144,7 +157,7 @@ def render_center(content)
       col = [1, 1 + (ncols - ansi_length(line.chomp))/2].max
       str << cursor_at(row + i, col) + line
     end
-  end  
+  end
 end
 
 # Renders a section banner.
@@ -156,26 +169,28 @@ def render_section(title)
   lfil = [1, width - 5 - rfil].max
   fleuron = '─' * lfil + ' ❧❦☙ ' + '─' * rfil
 
-  render_center("#{fleuron}\n\n#{title}\n\n#{fleuron}\n")
+  render_center("#{color}#{fleuron}\n\n#{title}\n\n#{fleuron}#{color}\n")
 end
 
 # Renders source code.
 def render_code(code, lexer)
-  render_block(Pygments.highlight(code, formatter: 'terminal256', lexer: lexer, options: {style: 'bw'}))
+  render_block(Pygments.highlight(code, formatter: 'terminal', lexer: lexer, options: {style: 'bw'}))
 end
 
 # Centers the whole content as a block. That is, the format within the content
 # is preserved, but the whole thing looks centered in the terminal. I think
 # this looks nicer than an ordinary flush against the left margin.
 def render_block(content)
+  content = color + content + color
+
   nrows, ncols = winsize
 
   nlines = content.count("\n")
   row = [1, 1 + (nrows - nlines)/2].max
-  
+
   width = width(content)
   col = [1, 1 + (ncols - width)/2].max
-  
+
   content.gsub(/^/) do
     cursor_at(row, col).tap { row += 1 }
   end
