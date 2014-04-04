@@ -40,47 +40,64 @@ section "Dynamic State" do
   center <<-EOS
     Dynamic machine states under state driving:
     ┌────────────────┐
-    │going_straight  │
+    │go_straight     │
     ├────────────────┤
-    │turning_left    │
+    │turn_left       │
     ├────────────────┤
-    │turning_right   │
-    └────────────────┘.sample
+    │turn_right      │
+    └────────────────┘
   EOS
 
   center <<-EOS
     Events:
     ┌──────────────────────────────────────────────────────────┐
-    │go_straight (previous_state => going_straight)            │
+    │do_go_straight (previous_state => go_straight)            │
     ├──────────────────────────────────────────────────────────┤
-    │turn_left (previous_state => turning_left)                │
+    │do_turn_left (previous_state => turn_left)                │
     ├──────────────────────────────────────────────────────────┤
-    │turn_right (previous_state => turning_right)              │
+    │do_turn_right (previous_state => turn_right)              │
     └──────────────────────────────────────────────────────────┘
   EOS
 end
 
-section "Example" do
-  center <<-EOS
+section "----Example----" do
+  block <<-EOS
     Main Mainche States:
-    parked (ignite)=> idling (shift_up)=> first_gear (shift_up)=> driving (shift_down)=> first_gear (shift_down)=> idling (park)=> parked
 
+      * initial: parked
+      * (ignite)=> idling
+      * (shift_up)=> first_gear
+      * (shift_up)=> driving
+      * (shift_down)=> first_gear
+      * (shift_down)=> idling
+      * (park)=> parked
+  EOS
+
+  block <<-EOS
     Sub Machine States:
-    driving (go_straight)=> going_straight (turn_left)=> turning_left (turn_right)=> turning_right
+
+      * initial: driving
+      * (go_straight)=> going_straight
+      * (turn_left)=> turning_left
+      * (turn_right)=> turning_right
   EOS
 end
 
-section "Columns" do
+section "----Columns----" do
   center <<-EOS
-    Main (Static)Machine:
-    state, previous_state
+    Main Static Machine:
 
-    Sub (Dynamic)Machine:
-    machine_state, previous_machine_state
+    :state, :previous_state
+  EOS
+
+  center <<-EOS
+    Sub Dynamic Machine:
+
+    :machine_state, :previous_machine_state
   EOS
 end
 
-section "Class" do
+section "----Class----" do
   code <<-EOS
     class Vehicle
       state_machine :state, initial => :parked do
@@ -118,25 +135,52 @@ section "Class" do
       end
     end
   EOS
+
+  code <<-EOS
+    class Machine
+      def initialize(object, *args, &block)
+        machine_class = Class.new
+        machine = machine_class.state_machine(:machine_state, *args, &block)
+        attribute = machine.attribute
+        action = machine.action
+
+        # Delegate attributes
+        machine_class.class_eval do
+
+          define_method(:definition) { machine }
+          define_method(attribute) { object.send(attribute) }
+          define_method("\#{attribute}=") {|value| object.send("\#{attribute}=", value) }
+          define_method(action) { object.send(action) } if action
+          # Custom
+          define_method(:attributes) { object.send(:attributes) }
+          define_method(:previous_machine_state) { object.send(:previous_machine_state) }
+          define_method(:previous_machine_state=) {|value| object.send(:previous_machine_state=, value) }
+        end
+
+        machine_class.new
+      end
+
+    end
+  EOS
 end
 
-section "Methods" do
+section "----Methods----" do
   code <<-EOS
     def next_state
-     return unless self.respond_to?(:state_events) # No more states
-     begin
-       next_event = self.machine.machine_state_events.last
-       if next_event
-         self.machine.send(next_event)
-       else # No more dynamic states
-         next_event = self.state_events.last
-         self.send(next_event)
-       end
-     rescue NoMethodError
-       next_event = self.state_events.last
-       self.send(next_event)
-     end
-     logger.info "Next event: " + next_event.inspect
+      return unless self.respond_to?(:state_events) # No more states
+      begin
+        next_event = self.machine.machine_state_events.last
+        if next_event
+          self.machine.send(next_event)
+        else # No more dynamic states
+          next_event = self.state_events.last
+          self.send(next_event)
+        end
+      rescue NoMethodError
+        next_event = self.state_events.last
+        self.send(next_event)
+      end
+      logger.info "Next event: " + next_event.inspect
     end
   EOS
 
@@ -159,8 +203,42 @@ section "Methods" do
 
   code <<-EOS
     def machine_init
+      pre_state = :driving
+      states = [:go_straight, :turn_left, :turn_right].sample
+
+      Machine.new(self, :initial => :driving, :action => :save) do
+        states.each do |state_sym|
+          event_name = %(do_\#{state}).to_sym
+
+          before_transition any => any do |vehicle, transition|
+            vehicle.previous_machine_state = transition.from
+          end
+
+          state(state_sym)
+
+          event(event_name) do
+            transition pre_state => state_name
+          end
+
+          pre_state = state_name
+        end
+      end
+
     end
   EOS
 end
+
+section "----Demo----" do
+end
+
+center <<-EOS
+  That's all. Thanks! Any questions?
+
+  State Machine single object static/dynamic state mix-in
+
+  Lecky Lao(@leckylao)
+
+  RORO 08-04-2014
+EOS
 
 __END__

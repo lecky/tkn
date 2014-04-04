@@ -279,7 +279,7 @@ n      = 0
 deck   = ARGV[0]
 mtime  = nil
 slide  = nil
-status = false
+status = true
 
 loop do
   clear_slide(slide)
