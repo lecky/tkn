@@ -1,7 +1,7 @@
 # encoding: utf-8
 
 center <<-EOS
-  WebSocket in Ruby on Rails
+  WebSocket in Ruby on Rails(4+)
 
   Lecky Lao(@leckylao)
 

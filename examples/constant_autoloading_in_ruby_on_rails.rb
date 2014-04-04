@@ -49,7 +49,7 @@ section "Constants Refresher" do
     C = Class.new(D) do
       include M
     end
-    
+
     # class name comes from the constant
     C.name # => "C"
   EOS
