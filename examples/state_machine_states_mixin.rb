@@ -40,22 +40,22 @@ section "Dynamic State" do
   center <<-EOS
     Dynamic machine states under state driving:
     ┌────────────────┐
-    │go_straight     │
+    │going_straight  │
     ├────────────────┤
-    │turn_left       │
+    │turning_left    │
     ├────────────────┤
-    │turn_right      │
+    │turning_right   │
     └────────────────┘
   EOS
 
   center <<-EOS
     Events:
     ┌──────────────────────────────────────────────────────────┐
-    │do_go_straight (previous_state => go_straight)            │
+    │do_going_straight (previous_state => going_straight)      │
     ├──────────────────────────────────────────────────────────┤
-    │do_turn_left (previous_state => turn_left)                │
+    │do_turning_left (previous_state => turning_left)          │
     ├──────────────────────────────────────────────────────────┤
-    │do_turn_right (previous_state => turn_right)              │
+    │do_turning_right (previous_state => turning_right)        │
     └──────────────────────────────────────────────────────────┘
   EOS
 end
@@ -77,9 +77,9 @@ section "----Example----" do
     Sub Machine States:
 
       * initial: driving
-      * (go_straight)=> going_straight
-      * (turn_left)=> turning_left
-      * (turn_right)=> turning_right
+      * (do_go_straight)=> going_straight
+      * (do_turn_left)=> turning_left
+      * (do_turn_right)=> turning_right
   EOS
 end
 
@@ -100,7 +100,7 @@ end
 section "----Class----" do
   code <<-EOS
     class Vehicle
-      state_machine :state, initial => :parked do
+      state_machine :state, :initial => :parked do
         before_transition any => any do |vehicle, transition|
           vehicle.previous_state = transition.from
         end
@@ -166,37 +166,36 @@ end
 
 section "----Methods----" do
   code <<-EOS
-    def next_state
+    def next_state!
       return unless self.respond_to?(:state_events) # No more states
       begin
-        next_event = self.machine.machine_state_events.last
+        next_event = self.machine.machine_state_events.first
         if next_event
           self.machine.send(next_event)
         else # No more dynamic states
-          next_event = self.state_events.last
+          next_event = self.state_events.first
           self.send(next_event)
         end
-      rescue NoMethodError
-        next_event = self.state_events.last
+      rescue NoMethodError => e
+        raise e unless e.message =~ /^super: no superclass method `machine' for /
+        next_event = self.state_events.first
         self.send(next_event)
       end
-      logger.info "Next event: " + next_event.inspect
+      next_event
     end
   EOS
 
   code <<-EOS
-    def retry
+    def previous_state!
       begin
-        if self.previous_machine_state
-          self.update_attributes(:machine_state => self.previous_machine_state)
-          self.machine.send(self.machine.machine_state_events.last)
+        if self.previous_machine_state && self.machine_state != "driving"
+          self.machine_state = self.previous_machine_state
         else
-          self.update_attributes(state:self.previous_state)
-          self.send(self.state_events.last)
+          self.state = self.previous_state
         end
-      rescue NoMethodError
-        self.update_attributes(state:self.previous_state)
-        self.send(self.state_events.last)
+      rescue NoMethodError => e
+        raise e unless e.message =~ /^super: no superclass method `machine' for /
+        self.state = self.previous_state
       end
     end
   EOS
@@ -204,11 +203,11 @@ section "----Methods----" do
   code <<-EOS
     def machine_init
       pre_state = :driving
-      states = [:go_straight, :turn_left, :turn_right].sample
+      states = [:going_straight, :turning_left, :turning_right].shuffle
 
-      Machine.new(self, :initial => :driving, :action => :save) do
+      @machine ||= Machine.new(self, :initial => :driving, action: :save) do
         states.each do |state_sym|
-          event_name = %(do_\#{state}).to_sym
+          event_name = %(do_#{state_sym}).to_sym
 
           before_transition any => any do |vehicle, transition|
             vehicle.previous_machine_state = transition.from
@@ -217,13 +216,12 @@ section "----Methods----" do
           state(state_sym)
 
           event(event_name) do
-            transition pre_state => state_name
+            transition pre_state => state_sym
           end
 
-          pre_state = state_name
+          pre_state = state_sym
         end
       end
-
     end
   EOS
 end
