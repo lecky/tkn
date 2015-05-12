@@ -16,7 +16,10 @@ section "----Capturing Groups----" do
   EOS
 
   center <<-EOS
-    The difference is how to access the group
+    The operator =~ returns the index of the first match (nil if no match)
+    and stores the MatchData in the global variable $~
+
+    The method match returns the MatchData itself (again, nil if no match)
   EOS
 end
 
@@ -30,7 +33,13 @@ section "Grouping with reference" do
   EOS
 
   center <<-EOS
-    When named capture groups are used with a literal regexp on the left-hand side of an expression and the =~ operator, the captured text is also assigned to local variables with corresponding names.
+    When named capture groups are used with a literal regexp
+
+    on the left-hand side of an expression and the =~ operator,
+
+    the captured text is also assigned to local variables
+
+    with corresponding names.
   EOS
 end
 
@@ -48,18 +57,18 @@ section "----Backreferences----" do
   EOS
 
   center <<-EOS
-    Note:
-      * $1 and $2 only store after the execution
+      $1 and $2 only store after the execution
 
-      * A regexp can't use named backreferences and numbered backreferences simultaneously.
+      A regexp can't use named backreferences
+      and numbered backreferences simultaneously.
   EOS
 end
 
 section "That's all, thanks!
 
-slides using tkn(https://github.com/fxn/tkn)
+slide: https://github.com/leckylao/tkn/blob/develop/examples/regex_in_ruby.rb
 
-https://github.com/leckylao/tkn/blob/develop/examples/regex_in_ruby.rb" do
+slides made using tkn(https://github.com/fxn/tkn)" do
 end
 
 __END__
