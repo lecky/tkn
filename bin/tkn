@@ -15,6 +15,7 @@ magenta = "\e[35;1m"
 cyan = "\e[36;1m"
 @reset = "\e[0m"
 @colors = [red, green, yellow, blue, magenta, cyan]
+speed = 0.0005 # The less the faster
 
 def color
   %(#{@reset}#{@colors.sample})
@@ -301,7 +302,7 @@ loop do
   else
     render(slide).each_char do |c|
       print c
-      sleep 0.002 # old-school touch: running cursor
+      sleep speed # old-school touch: running cursor
     end
   end
 
